@@ -1,0 +1,41 @@
+# Linux Server Backup Configuration
+
+# System Configuration
+SYSTEM:
+  server_name: "foobar.com"  # Server name to use in backup filenames
+
+# Database Configuration
+DB:
+  db_type: "mysql"  # Can be "mysql" or "mariadb"
+  db_host: "127.0.0.1"
+  db_user: "root"  # Optional, defaults to "root"
+  db_password: ""  # Optional, defaults to empty string
+  db_name: "--all-databases"  # Optional, defaults to "--all-databases"
+
+# Files Configuration
+FILES:
+  files_dir_path: "/var/www/something/current"
+
+# Backup Destination Configuration
+BACKUP:
+  destination_type: "ftp"  # Can be "ftp", "sftp", or "local" (default)
+  keep_local_copy: true    # Whether to keep a local copy after uploading
+  keep_backups: 5          # Number of backups to preserve (older ones will be deleted)
+
+# FTP Configuration (used when destination_type is "ftp")
+FTP:
+  host: "ftp.example.com"
+  port: 21
+  username: "ftpuser"
+  password: "ftppassword"
+  remote_dir: "/backups"
+  passive_mode: true
+
+# SFTP Configuration (used when destination_type is "sftp")
+SFTP:
+  host: "sftp.example.com"
+  port: 22
+  username: "sftpuser"
+  password: ""  # Leave empty if using key-based authentication
+  private_key_path: "/path/to/private/key"  # Path to private key for authentication
+  remote_dir: "/backups"

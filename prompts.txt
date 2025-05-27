@@ -1,0 +1,63 @@
+Creiamo un sistema di backup per server linux.
+Crea un agente in un singolo file python 3.x che risiede sul server e che esegue i comandi necessari in locale.
+
+I dati del server saranno presenti in un file yaml che verrà posizionato nel server al momento del setup del file dell'agente.
+
+Le informazioni del file yaml (del quale ti chiedo di crearne un esempio) sono le seguenti:
+DB
+db_type: "mysql/mariadb"
+db_host: "127.0.0.1"
+
+FILES
+files_dir_path: "/var/www/something/current"
+
+L'agente deve fare il backup di 2 cose:
+1. Il dump del server SQL che sarà mysql o mariadb tramite mysql_dump (o simile) e che poi comprimerà in un file tar.gz chiamato "[YYYY-MM-DD.hh:mm]_[server_name]_db.tar.gz";
+2. Il backup della root directory del webserver che comprimerà in un file tar.gz chiamato "[YYYY-MM-DD.hh:mm]_[server_name]_root_files.tar.gz"
+
+Una volta fatti i due step precedenti, l'agente deve creare un nuovo file tar.gz con all'interno i due file di cui sopra, chiamandolo "[YYYY-MM-DD.hh:mm]_[server_name]_root_files_and_db.tar.gz"
+
+Come prima cosa l'agente deve verificare la correttezza del file di configurazione yaml. Se il formato non è corretto o se non lo trova l'esecuzione deve interrompersi.
+
+---
+
+add in the yaml file a new section called "SYSTEM":
+SYSTEM
+server_name: foobar.com
+
+And change occurrencies in the code to use it as value for filenames
+
+---
+
+add in the yaml file at the end some new sections:
+
+BACKUP
+destination_type: "ftp, sftp"
+
+that describe where the final backup should be sent.
+
+Per each destonation_type, add a new section in the yaml file with the configuration parameters needed to make it work
+
+after that, implement in the code the functions needed to implement the destination
+
+---
+
+add in BACKUP section a new parameter to set how many backups must be preserved (older ones must be selected and deleted automatically).
+after the add, implement the code accordingly
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+FOR THE FUTURE
+replace all the code for sftp with a single command of bash

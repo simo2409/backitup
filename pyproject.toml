@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "backitup"
+version = "0.1.0"
+description = "A Linux server backup agent for MySQL/MariaDB databases and file directories"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "MIT"}
+authors = [
+    {name = "Server Admin"}
+]
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+sftp = [
+    "paramiko>=3.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test_backup_agent.py"]
+python_files = "test_*.py"
+python_functions = "test_*"
+python_classes = "Test*"
+addopts = "--verbose"
+
+[tool.setuptools]
+packages = ["backitup"]
+
+[project.scripts]
+backitup = "main:main"

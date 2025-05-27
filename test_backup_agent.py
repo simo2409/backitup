@@ -80,6 +80,209 @@ class TestBackupAgent:
         assert agent.server_name is not None
         assert agent.temp_dir.startswith("/tmp/backup_")
     
+    def test_load_config_from_env(self):
+        """Test loading configuration from environment variables"""
+        # Set environment variables
+        env_vars = {
+            'BACKITUP_SERVER_NAME': 'env-server',
+            'BACKITUP_DB_TYPE': 'mysql',
+            'BACKITUP_DB_HOST': '192.168.1.1',
+            'BACKITUP_DB_USER': 'dbuser',
+            'BACKITUP_DB_PASSWORD': 'dbpass',
+            'BACKITUP_DB_NAME': 'testdb',
+            'BACKITUP_FILES_DIR_PATH': '/var/www/html',
+            'BACKITUP_DESTINATION_TYPE': 'ftp',
+            'BACKITUP_KEEP_LOCAL_COPY': 'true',
+            'BACKITUP_KEEP_BACKUPS': '3',
+            'BACKITUP_FTP_HOST': 'ftp.test.com',
+            'BACKITUP_FTP_PORT': '2121',
+            'BACKITUP_FTP_USERNAME': 'ftpuser',
+            'BACKITUP_FTP_PASSWORD': 'ftppass',
+            'BACKITUP_FTP_REMOTE_DIR': '/backups',
+            'BACKITUP_FTP_PASSIVE_MODE': 'false',
+            'BACKITUP_SFTP_HOST': 'sftp.test.com',
+            'BACKITUP_SFTP_PORT': '2222',
+            'BACKITUP_SFTP_USERNAME': 'sftpuser',
+            'BACKITUP_SFTP_PASSWORD': 'sftppass',
+            'BACKITUP_SFTP_PRIVATE_KEY_PATH': '/path/to/key',
+            'BACKITUP_SFTP_REMOTE_DIR': '/sftp/backups'
+        }
+        
+        with patch.dict(os.environ, env_vars):
+            agent = BackupAgent()
+            config = agent.load_config_from_env()
+            
+            # Check that the configuration was loaded correctly
+            assert config['SYSTEM']['server_name'] == 'env-server'
+            assert config['DB']['db_type'] == 'mysql'
+            assert config['DB']['db_host'] == '192.168.1.1'
+            assert config['DB']['db_user'] == 'dbuser'
+            assert config['DB']['db_password'] == 'dbpass'
+            assert config['DB']['db_name'] == 'testdb'
+            assert config['FILES']['files_dir_path'] == '/var/www/html'
+            assert config['BACKUP']['destination_type'] == 'ftp'
+            assert config['BACKUP']['keep_local_copy'] is True
+            assert config['BACKUP']['keep_backups'] == 3
+            assert config['FTP']['host'] == 'ftp.test.com'
+            assert config['FTP']['port'] == 2121
+            assert config['FTP']['username'] == 'ftpuser'
+            assert config['FTP']['password'] == 'ftppass'
+            assert config['FTP']['remote_dir'] == '/backups'
+            assert config['FTP']['passive_mode'] is False
+            assert config['SFTP']['host'] == 'sftp.test.com'
+            assert config['SFTP']['port'] == 2222
+            assert config['SFTP']['username'] == 'sftpuser'
+            assert config['SFTP']['password'] == 'sftppass'
+            assert config['SFTP']['private_key_path'] == '/path/to/key'
+            assert config['SFTP']['remote_dir'] == '/sftp/backups'
+    
+    def test_load_config_from_env_partial(self):
+        """Test loading partial configuration from environment variables"""
+        # Set only some environment variables
+        env_vars = {
+            'BACKITUP_SERVER_NAME': 'env-server',
+            'BACKITUP_DB_TYPE': 'mysql',
+            'BACKITUP_DB_HOST': '192.168.1.1',
+            'BACKITUP_FILES_DIR_PATH': '/var/www/html'
+        }
+        
+        with patch.dict(os.environ, env_vars):
+            agent = BackupAgent()
+            config = agent.load_config_from_env()
+            
+            # Check that only the specified variables were loaded
+            assert config['SYSTEM']['server_name'] == 'env-server'
+            assert config['DB']['db_type'] == 'mysql'
+            assert config['DB']['db_host'] == '192.168.1.1'
+            assert config['FILES']['files_dir_path'] == '/var/www/html'
+            assert 'BACKUP' not in config
+            assert 'FTP' not in config
+            assert 'SFTP' not in config
+    
+    def test_load_config_from_env_empty(self):
+        """Test loading configuration when no environment variables are set"""
+        # Clear all relevant environment variables
+        env_vars = {}
+        for key in os.environ.keys():
+            if key.startswith('BACKITUP_'):
+                env_vars[key] = ''
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            agent = BackupAgent()
+            config = agent.load_config_from_env()
+            
+            # Check that the configuration is empty
+            assert config == {}
+    
+    def test_merge_configs(self):
+        """Test merging YAML and environment variable configurations"""
+        # Create YAML config
+        yaml_config = {
+            'SYSTEM': {
+                'server_name': 'yaml-server'
+            },
+            'DB': {
+                'db_type': 'mysql',
+                'db_host': '127.0.0.1',
+                'db_user': 'root',
+                'db_password': '',
+                'db_name': '--all-databases'
+            },
+            'FILES': {
+                'files_dir_path': '/var/www/yaml'
+            },
+            'BACKUP': {
+                'destination_type': 'local',
+                'keep_local_copy': True,
+                'keep_backups': 5
+            }
+        }
+        
+        # Create env config
+        env_config = {
+            'SYSTEM': {
+                'server_name': 'env-server'
+            },
+            'DB': {
+                'db_host': '192.168.1.1',
+                'db_user': 'dbuser'
+            },
+            'BACKUP': {
+                'keep_backups': 3
+            }
+        }
+        
+        agent = BackupAgent()
+        merged_config = agent.merge_configs(yaml_config, env_config)
+        
+        # Check that environment variables take precedence
+        assert merged_config['SYSTEM']['server_name'] == 'env-server'
+        assert merged_config['DB']['db_type'] == 'mysql'  # From YAML
+        assert merged_config['DB']['db_host'] == '192.168.1.1'  # From env
+        assert merged_config['DB']['db_user'] == 'dbuser'  # From env
+        assert merged_config['DB']['db_password'] == ''  # From YAML
+        assert merged_config['DB']['db_name'] == '--all-databases'  # From YAML
+        assert merged_config['FILES']['files_dir_path'] == '/var/www/yaml'  # From YAML
+        assert merged_config['BACKUP']['destination_type'] == 'local'  # From YAML
+        assert merged_config['BACKUP']['keep_local_copy'] is True  # From YAML
+        assert merged_config['BACKUP']['keep_backups'] == 3  # From env
+    
+    def test_merge_configs_env_only(self):
+        """Test merging when only environment variables are set"""
+        # Create empty YAML config
+        yaml_config = {}
+        
+        # Create env config
+        env_config = {
+            'SYSTEM': {
+                'server_name': 'env-server'
+            },
+            'DB': {
+                'db_type': 'mysql',
+                'db_host': '192.168.1.1'
+            },
+            'FILES': {
+                'files_dir_path': '/var/www/html'
+            }
+        }
+        
+        agent = BackupAgent()
+        merged_config = agent.merge_configs(yaml_config, env_config)
+        
+        # Check that environment variables are used
+        assert merged_config['SYSTEM']['server_name'] == 'env-server'
+        assert merged_config['DB']['db_type'] == 'mysql'
+        assert merged_config['DB']['db_host'] == '192.168.1.1'
+        assert merged_config['FILES']['files_dir_path'] == '/var/www/html'
+    
+    def test_merge_configs_yaml_only(self):
+        """Test merging when only YAML configuration is set"""
+        # Create YAML config
+        yaml_config = {
+            'SYSTEM': {
+                'server_name': 'yaml-server'
+            },
+            'DB': {
+                'db_type': 'mysql',
+                'db_host': '127.0.0.1'
+            },
+            'FILES': {
+                'files_dir_path': '/var/www/yaml'
+            }
+        }
+        
+        # Create empty env config
+        env_config = {}
+        
+        agent = BackupAgent()
+        merged_config = agent.merge_configs(yaml_config, env_config)
+        
+        # Check that YAML configuration is used
+        assert merged_config['SYSTEM']['server_name'] == 'yaml-server'
+        assert merged_config['DB']['db_type'] == 'mysql'
+        assert merged_config['DB']['db_host'] == '127.0.0.1'
+        assert merged_config['FILES']['files_dir_path'] == '/var/www/yaml'
+    
     @patch('os.path.exists')
     @patch('builtins.open', new_callable=mock_open, read_data="SYSTEM:\n  server_name: foobar.com\nDB:\n  db_type: mysql\n  db_host: 127.0.0.1\nFILES:\n  files_dir_path: /var/www/something/current")
     def test_validate_config_valid(self, mock_file, mock_exists):
@@ -96,8 +299,8 @@ class TestBackupAgent:
         mock_file.assert_called_once_with(agent.config_path, 'r')
     
     @patch('os.path.exists')
-    def test_validate_config_file_not_found(self, mock_exists):
-        """Test validation when config file doesn't exist"""
+    def test_validate_config_file_not_found_no_env(self, mock_exists):
+        """Test validation when config file doesn't exist and no environment variables are set"""
         # Set up mock to return different values based on the path
         def side_effect(path):
             if path == "config.yaml":
@@ -106,12 +309,60 @@ class TestBackupAgent:
             
         mock_exists.side_effect = side_effect
         
-        agent = BackupAgent()
-        result = agent.validate_config()
+        # Clear all relevant environment variables
+        env_vars = {}
+        for key in os.environ.keys():
+            if key.startswith('BACKITUP_'):
+                env_vars[key] = ''
         
-        assert result is False
-        # Verify that exists was called with the config path
-        mock_exists.assert_any_call(agent.config_path)
+        with patch.dict(os.environ, env_vars, clear=True):
+            agent = BackupAgent()
+            result = agent.validate_config()
+            
+            assert result is False
+            # Verify that exists was called with the config path
+            mock_exists.assert_any_call(agent.config_path)
+    
+    @patch('os.path.exists')
+    def test_validate_config_file_not_found_with_env(self, mock_exists):
+        """Test validation when config file doesn't exist but environment variables are set"""
+        # Set up mock to return different values based on the path
+        def side_effect(path):
+            if path == "config.yaml":
+                return False
+            return True
+            
+        mock_exists.side_effect = side_effect
+        
+        # Set required environment variables
+        env_vars = {
+            'BACKITUP_SERVER_NAME': 'env-server',
+            'BACKITUP_DB_TYPE': 'mysql',
+            'BACKITUP_DB_HOST': '192.168.1.1',
+            'BACKITUP_FILES_DIR_PATH': '/var/www/html'
+        }
+        
+        with patch.dict(os.environ, env_vars):
+            agent = BackupAgent()
+            
+            # Mock the files directory to exist
+            with patch('os.path.exists') as mock_path_exists:
+                def path_exists_side_effect(path):
+                    if path == "config.yaml":
+                        return False
+                    if path == "/var/www/html":
+                        return True
+                    return True
+                
+                mock_path_exists.side_effect = path_exists_side_effect
+                
+                result = agent.validate_config()
+                
+                assert result is True
+                # Verify that exists was called with the config path
+                mock_path_exists.assert_any_call(agent.config_path)
+                # Verify that exists was called with the files directory
+                mock_path_exists.assert_any_call('/var/www/html')
     
     @patch('os.path.exists')
     @patch('builtins.open', new_callable=mock_open, read_data="invalid yaml content")
@@ -142,6 +393,33 @@ class TestBackupAgent:
         # Verify that exists was called with the config path
         mock_exists.assert_any_call(agent.config_path)
         mock_file.assert_called_once_with(agent.config_path, 'r')
+    
+    @patch('os.path.exists')
+    @patch('builtins.open', new_callable=mock_open, read_data="SYSTEM:\n  server_name: foobar.com\nDB:\n  db_host: 127.0.0.1\nFILES:\n  files_dir_path: /var/www/something/current")
+    def test_validate_config_missing_field_with_env(self, mock_file, mock_exists):
+        """Test validation with missing required field in YAML but provided in environment variables"""
+        mock_exists.return_value = True
+        
+        # Set the missing field in environment variables
+        env_vars = {
+            'BACKITUP_DB_TYPE': 'mysql'
+        }
+        
+        with patch.dict(os.environ, env_vars):
+            agent = BackupAgent()
+            
+            # Mock the files directory to exist
+            with patch('os.path.exists') as mock_path_exists:
+                def path_exists_side_effect(path):
+                    if path == "/var/www/something/current":
+                        return True
+                    return True
+                
+                mock_path_exists.side_effect = path_exists_side_effect
+                
+                result = agent.validate_config()
+                
+                assert result is True
     
     @patch('subprocess.run')
     def test_backup_database(self, mock_run, agent_with_mock_config):
@@ -226,18 +504,78 @@ class TestBackupAgent:
         # Verify validate_config was called
         agent_with_mock_config.validate_config.assert_called_once()
     
+    def test_execute_command(self, agent_with_mock_config):
+        """Test execute_command method"""
+        # Set up the agent with a command
+        agent_with_mock_config.config.setdefault('COMMANDS', {})
+        agent_with_mock_config.config['COMMANDS']['pre_backup'] = "echo 'test command'"
+        
+        # Mock subprocess.run to return success
+        with patch('subprocess.run') as mock_run:
+            process_mock = MagicMock()
+            process_mock.returncode = 0
+            process_mock.stdout = "test output"
+            process_mock.stderr = ""
+            mock_run.return_value = process_mock
+            
+            # Test the method
+            result = agent_with_mock_config.execute_command('pre_backup')
+            
+            # Check that the result is True (indicating success)
+            assert result is True
+            
+            # Verify subprocess.run was called with the correct command
+            mock_run.assert_called_once_with("echo 'test command'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    def test_execute_command_failure(self, agent_with_mock_config):
+        """Test execute_command method with command failure"""
+        # Set up the agent with a command
+        agent_with_mock_config.config.setdefault('COMMANDS', {})
+        agent_with_mock_config.config['COMMANDS']['pre_backup'] = "invalid_command"
+        
+        # Mock subprocess.run to return failure
+        with patch('subprocess.run') as mock_run:
+            process_mock = MagicMock()
+            process_mock.returncode = 1
+            process_mock.stdout = ""
+            process_mock.stderr = "command not found"
+            mock_run.return_value = process_mock
+            
+            # Test the method
+            result = agent_with_mock_config.execute_command('pre_backup')
+            
+            # Check that the result is False (indicating failure)
+            assert result is False
+            
+            # Verify subprocess.run was called with the correct command
+            mock_run.assert_called_once_with("invalid_command", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    def test_execute_command_no_command(self, agent_with_mock_config):
+        """Test execute_command method with no command configured"""
+        # Ensure no command is configured
+        if 'COMMANDS' in agent_with_mock_config.config:
+            agent_with_mock_config.config['COMMANDS'] = {}
+        
+        # Test the method
+        result = agent_with_mock_config.execute_command('pre_backup')
+        
+        # Check that the result is True (indicating success, as no command was configured)
+        assert result is True
+    
     @patch('main.BackupAgent.backup_database')
     @patch('main.BackupAgent.backup_files')
     @patch('main.BackupAgent.combine_backups')
     @patch('main.BackupAgent.send_backup')
+    @patch('main.BackupAgent.execute_command')
     @patch('main.BackupAgent.cleanup')
-    def test_run_success(self, mock_cleanup, mock_send, mock_combine, mock_backup_files, mock_backup_db, agent_with_mock_config):
+    def test_run_success(self, mock_cleanup, mock_execute_command, mock_send, mock_combine, mock_backup_files, mock_backup_db, agent_with_mock_config):
         """Test run method with successful execution"""
         # Mock all the methods to return success
         mock_backup_db.return_value = "/tmp/db_backup.tar.gz"
         mock_backup_files.return_value = "/tmp/files_backup.tar.gz"
         mock_combine.return_value = "/tmp/combined_backup.tar.gz"
         mock_send.return_value = True
+        mock_execute_command.return_value = True
         
         result = agent_with_mock_config.run()
         
@@ -245,11 +583,14 @@ class TestBackupAgent:
         assert result is True
         
         # Verify all methods were called
+        mock_execute_command.assert_any_call('pre_backup')
         mock_backup_db.assert_called_once()
         mock_backup_files.assert_called_once()
         mock_combine.assert_called_once_with("/tmp/db_backup.tar.gz", "/tmp/files_backup.tar.gz")
+        mock_execute_command.assert_any_call('post_backup')
         mock_send.assert_called_once_with("/tmp/combined_backup.tar.gz")
         mock_cleanup.assert_called_once_with("/tmp/combined_backup.tar.gz")
+        mock_execute_command.assert_any_call('post_transfer')
     
     @patch('main.BackupAgent.backup_database')
     @patch('main.BackupAgent.cleanup')

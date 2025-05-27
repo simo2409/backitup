@@ -46,7 +46,7 @@ class BackupAgent:
         Initialize the backup agent with the path to the configuration file.
         
         Args:
-            config_path: Path to the YAML configuration file
+            config_path: Path to the YAML configuration file (optional if environment variables are set)
         """
         self.config_path = config_path
         self.config = None
@@ -58,24 +58,178 @@ class BackupAgent:
         # Ensure temp directory exists
         os.makedirs(self.temp_dir, exist_ok=True)
         
+    def load_config_from_env(self) -> Dict[str, Any]:
+        """
+        Load configuration from environment variables.
+        
+        Returns:
+            Dict[str, Any]: Configuration dictionary loaded from environment variables
+        """
+        env_config = {}
+        
+        # SYSTEM section
+        if os.environ.get('BACKITUP_SERVER_NAME'):
+            env_config.setdefault('SYSTEM', {})
+            env_config['SYSTEM']['server_name'] = os.environ.get('BACKITUP_SERVER_NAME')
+        
+        # COMMANDS section
+        commands_keys = {
+            'BACKITUP_PRE_BACKUP_COMMAND': 'pre_backup',
+            'BACKITUP_POST_BACKUP_COMMAND': 'post_backup',
+            'BACKITUP_POST_TRANSFER_COMMAND': 'post_transfer'
+        }
+        
+        for env_key, config_key in commands_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('COMMANDS', {})
+                env_config['COMMANDS'][config_key] = os.environ.get(env_key)
+        
+        # DB section
+        db_keys = {
+            'BACKITUP_DB_TYPE': 'db_type',
+            'BACKITUP_DB_HOST': 'db_host',
+            'BACKITUP_DB_USER': 'db_user',
+            'BACKITUP_DB_PASSWORD': 'db_password',
+            'BACKITUP_DB_NAME': 'db_name'
+        }
+        
+        for env_key, config_key in db_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('DB', {})
+                env_config['DB'][config_key] = os.environ.get(env_key)
+        
+        # FILES section
+        if os.environ.get('BACKITUP_FILES_DIR_PATH'):
+            env_config.setdefault('FILES', {})
+            env_config['FILES']['files_dir_path'] = os.environ.get('BACKITUP_FILES_DIR_PATH')
+        
+        # BACKUP section
+        backup_keys = {
+            'BACKITUP_DESTINATION_TYPE': 'destination_type',
+            'BACKITUP_KEEP_LOCAL_COPY': 'keep_local_copy',
+            'BACKITUP_KEEP_BACKUPS': 'keep_backups'
+        }
+        
+        for env_key, config_key in backup_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('BACKUP', {})
+                # Convert string to boolean for keep_local_copy
+                if config_key == 'keep_local_copy':
+                    env_config['BACKUP'][config_key] = os.environ.get(env_key).lower() in ('true', 'yes', '1')
+                # Convert string to int for keep_backups
+                elif config_key == 'keep_backups':
+                    try:
+                        env_config['BACKUP'][config_key] = int(os.environ.get(env_key))
+                    except ValueError:
+                        logger.warning(f"Invalid value for {env_key}: {os.environ.get(env_key)}. Using default.")
+                else:
+                    env_config['BACKUP'][config_key] = os.environ.get(env_key)
+        
+        # FTP section
+        ftp_keys = {
+            'BACKITUP_FTP_HOST': 'host',
+            'BACKITUP_FTP_PORT': 'port',
+            'BACKITUP_FTP_USERNAME': 'username',
+            'BACKITUP_FTP_PASSWORD': 'password',
+            'BACKITUP_FTP_REMOTE_DIR': 'remote_dir',
+            'BACKITUP_FTP_PASSIVE_MODE': 'passive_mode'
+        }
+        
+        for env_key, config_key in ftp_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('FTP', {})
+                # Convert string to int for port
+                if config_key == 'port':
+                    try:
+                        env_config['FTP'][config_key] = int(os.environ.get(env_key))
+                    except ValueError:
+                        logger.warning(f"Invalid value for {env_key}: {os.environ.get(env_key)}. Using default.")
+                # Convert string to boolean for passive_mode
+                elif config_key == 'passive_mode':
+                    env_config['FTP'][config_key] = os.environ.get(env_key).lower() in ('true', 'yes', '1')
+                else:
+                    env_config['FTP'][config_key] = os.environ.get(env_key)
+        
+        # SFTP section
+        sftp_keys = {
+            'BACKITUP_SFTP_HOST': 'host',
+            'BACKITUP_SFTP_PORT': 'port',
+            'BACKITUP_SFTP_USERNAME': 'username',
+            'BACKITUP_SFTP_PASSWORD': 'password',
+            'BACKITUP_SFTP_PRIVATE_KEY_PATH': 'private_key_path',
+            'BACKITUP_SFTP_REMOTE_DIR': 'remote_dir'
+        }
+        
+        for env_key, config_key in sftp_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('SFTP', {})
+                # Convert string to int for port
+                if config_key == 'port':
+                    try:
+                        env_config['SFTP'][config_key] = int(os.environ.get(env_key))
+                    except ValueError:
+                        logger.warning(f"Invalid value for {env_key}: {os.environ.get(env_key)}. Using default.")
+                else:
+                    env_config['SFTP'][config_key] = os.environ.get(env_key)
+        
+        if env_config:
+            logger.info("Loaded configuration from environment variables")
+        
+        return env_config
+    
+    def merge_configs(self, yaml_config: Dict[str, Any], env_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Merge YAML configuration with environment variables configuration.
+        Environment variables take precedence over YAML configuration.
+        
+        Args:
+            yaml_config: Configuration dictionary loaded from YAML file
+            env_config: Configuration dictionary loaded from environment variables
+            
+        Returns:
+            Dict[str, Any]: Merged configuration dictionary
+        """
+        # Start with a copy of the YAML config
+        merged_config = yaml_config.copy() if yaml_config else {}
+        
+        # Merge environment variables config, giving it precedence
+        for section, section_config in env_config.items():
+            if section not in merged_config:
+                merged_config[section] = {}
+            
+            for key, value in section_config.items():
+                merged_config[section][key] = value
+        
+        return merged_config
+    
     def validate_config(self) -> bool:
         """
-        Validate the YAML configuration file.
+        Validate the configuration from YAML file and/or environment variables.
         
         Returns:
             bool: True if configuration is valid, False otherwise
         """
         try:
-            # Check if config file exists
-            if not os.path.exists(self.config_path):
-                logger.error(f"Configuration file not found: {self.config_path}")
-                return False
-                
-            # Load and parse YAML
-            with open(self.config_path, 'r') as file:
-                self.config = yaml.safe_load(file)
+            yaml_config = {}
             
-            logger.info(f"Loaded configuration from {self.config_path}")
+            # Load YAML configuration if file exists
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r') as file:
+                    yaml_config = yaml.safe_load(file) or {}
+                logger.info(f"Loaded configuration from {self.config_path}")
+            else:
+                logger.info(f"Configuration file not found: {self.config_path}. Will try to use environment variables.")
+            
+            # Load environment variables configuration
+            env_config = self.load_config_from_env()
+            
+            # Merge configurations, with environment variables taking precedence
+            self.config = self.merge_configs(yaml_config, env_config)
+            
+            # If no configuration was loaded, return False
+            if not self.config:
+                logger.error("No configuration found in YAML file or environment variables")
+                return False
             
             # Validate required fields
             required_db_fields = ['db_type', 'db_host']
@@ -830,6 +984,40 @@ class BackupAgent:
             logger.error(f"Unknown destination type: {destination_type}")
             return False
     
+    def execute_command(self, command_type: str) -> bool:
+        """
+        Execute a command from the configuration.
+        
+        Args:
+            command_type: Type of command to execute ('pre_backup', 'post_backup', or 'post_transfer')
+            
+        Returns:
+            bool: True if command execution was successful or no command was configured, False otherwise
+        """
+        try:
+            if 'COMMANDS' not in self.config or not self.config['COMMANDS'].get(command_type):
+                logger.info(f"No {command_type} command configured, skipping execution")
+                return True
+                
+            command = self.config['COMMANDS'][command_type]
+            logger.info(f"Executing {command_type} command: {command}")
+            
+            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            if result.returncode != 0:
+                logger.error(f"{command_type} command failed with exit code {result.returncode}: {result.stderr}")
+                return False
+                
+            logger.info(f"{command_type} command executed successfully")
+            if result.stdout:
+                logger.info(f"{command_type} command output: {result.stdout}")
+                
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error executing {command_type} command: {e}")
+            return False
+    
     def cleanup(self, backup_path: str = None):
         """
         Remove temporary files and directories.
@@ -863,6 +1051,11 @@ class BackupAgent:
             logger.error("Configuration validation failed. Aborting backup.")
             return False
         
+        # Execute pre-backup command
+        if not self.execute_command('pre_backup'):
+            logger.error("Pre-backup command failed. Aborting backup.")
+            return False
+        
         # Backup database
         db_backup_path = self.backup_database()
         if not db_backup_path:
@@ -884,6 +1077,10 @@ class BackupAgent:
             self.cleanup()
             return False
         
+        # Execute post-backup command
+        if not self.execute_command('post_backup'):
+            logger.error("Post-backup command failed. Continuing with backup process.")
+        
         # Send backup to configured destination
         upload_success = self.send_backup(combined_path)
         if not upload_success and 'BACKUP' in self.config and self.config['BACKUP'].get('destination_type') != 'local':
@@ -898,6 +1095,10 @@ class BackupAgent:
         
         if not upload_success and 'BACKUP' in self.config and self.config['BACKUP'].get('destination_type') != 'local':
             return False
+        
+        # Execute post-transfer command
+        if not self.execute_command('post_transfer'):
+            logger.error("Post-transfer command failed.")
         
         logger.info(f"Backup process completed successfully. Final backup: {combined_path}")
         return True

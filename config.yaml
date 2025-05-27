@@ -4,6 +4,12 @@
 SYSTEM:
   server_name: "foobar.com"  # Server name to use in backup filenames
 
+# Command Execution Configuration
+COMMANDS:
+  pre_backup: ""  # Command to execute before beginning backup operations
+  post_backup: ""  # Command to execute after backup operations but before transfer
+  post_transfer: ""  # Command to execute after all operations including transfer
+
 # Database Configuration
 DB:
   db_type: "mysql"  # Can be "mysql" or "mariadb"

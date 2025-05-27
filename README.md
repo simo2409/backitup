@@ -8,6 +8,7 @@ A Python-based backup agent for Linux servers that creates backups of MySQL/Mari
 - Backs up specified file directories
 - Compresses backups into tar.gz files
 - Creates a combined archive containing both database and files backups
+- Executes custom commands at key points in the backup process
 - Validates configuration before proceeding
 - Detailed logging
 - Supports uploading backups to FTP or SFTP servers
@@ -42,6 +43,10 @@ chmod +x main.py
 
 ## Configuration
 
+You can configure the backup agent using either a YAML configuration file, environment variables, or a combination of both. If a configuration option is specified in both the YAML file and environment variables, the environment variable takes precedence.
+
+### YAML Configuration
+
 Edit the `config.yaml` file to match your server's configuration:
 
 ```yaml
@@ -60,6 +65,12 @@ DB:
 # Files Configuration
 FILES:
   files_dir_path: "/var/www/something/current"
+
+# Command Execution Configuration
+COMMANDS:
+  pre_backup: "echo 'Starting backup' | mail -s 'Backup started' admin@example.com"    # Command to execute before beginning backup operations
+  post_backup: "echo 'Backup created, preparing to transfer' | mail -s 'Backup ready' admin@example.com"   # Command to execute after backup operations but before transfer
+  post_transfer: "echo 'Backup completed and transferred' | mail -s 'Backup completed' admin@example.com" # Command to execute after all operations including transfer
 
 # Backup Destination Configuration
 BACKUP:
@@ -86,6 +97,69 @@ SFTP:
   remote_dir: "/backups"
 ```
 
+### Environment Variables Configuration
+
+You can also configure the backup agent using environment variables. This is useful for containerized environments or when you want to avoid storing sensitive information in configuration files.
+
+The following environment variables are supported:
+
+#### System Configuration
+- `BACKITUP_SERVER_NAME`: Server name to use in backup filenames
+
+#### Database Configuration
+- `BACKITUP_DB_TYPE`: Database type, either "mysql" or "mariadb"
+- `BACKITUP_DB_HOST`: Database host address
+- `BACKITUP_DB_USER`: Database username
+- `BACKITUP_DB_PASSWORD`: Database password
+- `BACKITUP_DB_NAME`: Database name to backup
+
+#### Files Configuration
+- `BACKITUP_FILES_DIR_PATH`: Path to the directory to backup
+
+#### Command Execution Configuration
+- `BACKITUP_PRE_BACKUP_COMMAND`: Command to execute before beginning backup operations
+- `BACKITUP_POST_BACKUP_COMMAND`: Command to execute after backup operations but before transfer
+- `BACKITUP_POST_TRANSFER_COMMAND`: Command to execute after all operations including transfer
+
+#### Backup Destination Configuration
+- `BACKITUP_DESTINATION_TYPE`: Where to send the backup, can be "local", "ftp", or "sftp"
+- `BACKITUP_KEEP_LOCAL_COPY`: Whether to keep a local copy of the backup after uploading (true/false)
+- `BACKITUP_KEEP_BACKUPS`: Number of backups to preserve
+
+#### FTP Configuration
+- `BACKITUP_FTP_HOST`: FTP server hostname or IP address
+- `BACKITUP_FTP_PORT`: FTP server port
+- `BACKITUP_FTP_USERNAME`: FTP username
+- `BACKITUP_FTP_PASSWORD`: FTP password
+- `BACKITUP_FTP_REMOTE_DIR`: Directory on the FTP server to store backups
+- `BACKITUP_FTP_PASSIVE_MODE`: Whether to use passive mode (true/false)
+
+#### SFTP Configuration
+- `BACKITUP_SFTP_HOST`: SFTP server hostname or IP address
+- `BACKITUP_SFTP_PORT`: SFTP server port
+- `BACKITUP_SFTP_USERNAME`: SFTP username
+- `BACKITUP_SFTP_PASSWORD`: SFTP password
+- `BACKITUP_SFTP_PRIVATE_KEY_PATH`: Path to the private key file
+- `BACKITUP_SFTP_REMOTE_DIR`: Directory on the SFTP server to store backups
+
+Example of setting environment variables:
+
+```bash
+# Set required environment variables
+export BACKITUP_SERVER_NAME="foobar.com"
+export BACKITUP_DB_TYPE="mysql"
+export BACKITUP_DB_HOST="127.0.0.1"
+export BACKITUP_FILES_DIR_PATH="/var/www/something/current"
+
+# Set command execution (optional)
+export BACKITUP_PRE_BACKUP_COMMAND="echo 'Starting backup' | mail -s 'Backup started' admin@example.com"
+export BACKITUP_POST_BACKUP_COMMAND="echo 'Backup created, preparing to transfer' | mail -s 'Backup ready' admin@example.com"
+export BACKITUP_POST_TRANSFER_COMMAND="echo 'Backup completed and transferred' | mail -s 'Backup completed' admin@example.com"
+
+# Run the backup agent
+./main.py
+```
+
 ### Configuration Options
 
 #### SYSTEM Section
@@ -103,6 +177,12 @@ SFTP:
 #### FILES Section
 
 - `files_dir_path`: Path to the directory to backup
+
+#### COMMANDS Section (Optional)
+
+- `pre_backup`: Command to execute before beginning backup operations
+- `post_backup`: Command to execute after backup operations but before transfer
+- `post_transfer`: Command to execute after all operations including transfer
 
 #### BACKUP Section (Optional)
 
@@ -141,6 +221,8 @@ Or specify a custom configuration file:
 ```bash
 ./main.py /path/to/custom-config.yaml
 ```
+
+The configuration file is optional if all required configuration is provided through environment variables.
 
 ## Output
 

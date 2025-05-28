@@ -6,6 +6,7 @@ import sys
 import pytest
 import tempfile
 import yaml
+import subprocess
 from unittest.mock import patch, MagicMock, mock_open
 from main import BackupAgent
 
@@ -33,6 +34,9 @@ class TestBackupAgent:
                 'destination_type': 'local',
                 'keep_local_copy': True,
                 'keep_backups': 5
+            },
+            'LOGS': {
+                'keep_logs': 5
             },
             'FTP': {
                 'host': 'ftp.example.com',
@@ -974,14 +978,66 @@ class TestBackupAgent:
         # Verify delete_old_remote_backups_ftp was not called
         mock_ftp_rotate.assert_not_called()
     
+    @patch('glob.glob')
+    @patch('os.path.getmtime')
+    def test_list_log_files(self, mock_getmtime, mock_glob, agent_with_mock_config):
+        """Test listing log files"""
+        # Mock glob.glob to return a list of log files
+        log_files = [
+            "/path/to/[2023-01-01.12:00]_backup.log",
+            "/path/to/[2023-01-02.12:00]_backup.log",
+            "/path/to/[2023-01-03.12:00]_backup.log"
+        ]
+        mock_glob.return_value = log_files
+        
+        # Mock getmtime to return timestamps in order (using a dictionary to map paths to timestamps)
+        timestamps = {path: i for i, path in enumerate(log_files)}
+        mock_getmtime.side_effect = lambda x: timestamps[x]
+        
+        # Test the method
+        result = agent_with_mock_config.list_log_files()
+        
+        # Check that the result matches the expected list
+        assert result == log_files
+        
+        # Verify glob was called with the correct pattern
+        mock_glob.assert_called_once()
+        pattern_arg = mock_glob.call_args[0][0]
+        assert "[*]_backup.log" in pattern_arg
+    
+    @patch('os.remove')
+    @patch('main.BackupAgent.list_log_files')
+    def test_rotate_logs(self, mock_list_logs, mock_remove, agent_with_mock_config):
+        """Test rotating log files"""
+        # Set up the agent with LOGS configuration
+        agent_with_mock_config.config['LOGS'] = {'keep_logs': 2}
+        
+        # Mock list_log_files to return a list of log files
+        log_files = [
+            "/path/to/[2023-01-01.12:00]_backup.log",
+            "/path/to/[2023-01-02.12:00]_backup.log",
+            "/path/to/[2023-01-03.12:00]_backup.log"
+        ]
+        mock_list_logs.return_value = log_files
+        
+        # Test the method
+        agent_with_mock_config.rotate_logs()
+        
+        # Verify list_log_files was called
+        mock_list_logs.assert_called_once()
+        
+        # Verify os.remove was called for the oldest log file
+        mock_remove.assert_called_once_with(log_files[0])
+    
+    @patch('main.BackupAgent.rotate_logs')
     @patch('main.BackupAgent.rotate_backups')
     @patch('main.BackupAgent.backup_database')
     @patch('main.BackupAgent.backup_files')
     @patch('main.BackupAgent.combine_backups')
     @patch('main.BackupAgent.send_backup')
     @patch('main.BackupAgent.cleanup')
-    def test_run_with_rotation(self, mock_cleanup, mock_send, mock_combine, mock_backup_files, mock_backup_db, mock_rotate, agent_with_mock_config):
-        """Test run method with backup rotation"""
+    def test_run_with_rotation(self, mock_cleanup, mock_send, mock_combine, mock_backup_files, mock_backup_db, mock_rotate_backups, mock_rotate_logs, agent_with_mock_config):
+        """Test run method with backup and log rotation"""
         # Mock all the methods to return success
         mock_backup_db.return_value = "/tmp/db_backup.tar.gz"
         mock_backup_files.return_value = "/tmp/files_backup.tar.gz"
@@ -998,8 +1054,36 @@ class TestBackupAgent:
         mock_backup_files.assert_called_once()
         mock_combine.assert_called_once_with("/tmp/db_backup.tar.gz", "/tmp/files_backup.tar.gz")
         mock_send.assert_called_once_with("/tmp/combined_backup.tar.gz")
-        mock_rotate.assert_called_once()
+        mock_rotate_backups.assert_called_once()
+        mock_rotate_logs.assert_called_once()
         mock_cleanup.assert_called_once_with("/tmp/combined_backup.tar.gz")
+    
+    def test_rotate_logs_no_config(self, agent_with_mock_config):
+        """Test rotate_logs method when no LOGS configuration is present"""
+        # Remove LOGS section from config if it exists
+        if 'LOGS' in agent_with_mock_config.config:
+            del agent_with_mock_config.config['LOGS']
+        
+        # Mock list_log_files to ensure it's not called
+        with patch('main.BackupAgent.list_log_files') as mock_list_logs:
+            # Test the method
+            agent_with_mock_config.rotate_logs()
+            
+            # Verify list_log_files was not called
+            mock_list_logs.assert_not_called()
+    
+    def test_rotate_logs_disabled(self, agent_with_mock_config):
+        """Test rotate_logs method when log rotation is disabled (keep_logs <= 0)"""
+        # Set keep_logs to 0 to disable rotation
+        agent_with_mock_config.config['LOGS'] = {'keep_logs': 0}
+        
+        # Mock list_log_files to ensure it's not called
+        with patch('main.BackupAgent.list_log_files') as mock_list_logs:
+            # Test the method
+            agent_with_mock_config.rotate_logs()
+            
+            # Verify list_log_files was not called
+            mock_list_logs.assert_not_called()
 
 
 if __name__ == "__main__":

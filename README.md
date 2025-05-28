@@ -78,6 +78,10 @@ BACKUP:
   keep_local_copy: true    # Whether to keep a local copy after uploading
   keep_backups: 5          # Number of backups to preserve (older ones will be deleted)
 
+# Logs Configuration
+LOGS:
+  keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
+
 # FTP Configuration (used when destination_type is "ftp")
 FTP:
   host: "ftp.example.com"
@@ -126,6 +130,9 @@ The following environment variables are supported:
 - `BACKITUP_KEEP_LOCAL_COPY`: Whether to keep a local copy of the backup after uploading (true/false)
 - `BACKITUP_KEEP_BACKUPS`: Number of backups to preserve
 
+#### Logs Configuration
+- `BACKITUP_KEEP_LOGS`: Number of log files to preserve (older ones will be automatically deleted)
+
 #### FTP Configuration
 - `BACKITUP_FTP_HOST`: FTP server hostname or IP address
 - `BACKITUP_FTP_PORT`: FTP server port
@@ -155,6 +162,9 @@ export BACKITUP_FILES_DIR_PATH="/var/www/something/current"
 export BACKITUP_PRE_BACKUP_COMMAND="echo 'Starting backup' | mail -s 'Backup started' admin@example.com"
 export BACKITUP_POST_BACKUP_COMMAND="echo 'Backup created, preparing to transfer' | mail -s 'Backup ready' admin@example.com"
 export BACKITUP_POST_TRANSFER_COMMAND="rclone sync /path/to/backups remote:backup-folder --progress"
+
+# Set log rotation (optional)
+export BACKITUP_KEEP_LOGS=5
 
 # Run the backup agent
 ./main.py
@@ -199,6 +209,10 @@ This example uses rclone to synchronize your local backup directory with a confi
 - `destination_type`: Where to send the backup, can be "local", "ftp", or "sftp"
 - `keep_local_copy`: Whether to keep a local copy of the backup after uploading to a remote destination
 - `keep_backups`: Number of backups to preserve (older ones will be automatically deleted)
+
+#### LOGS Section (Optional)
+
+- `keep_logs`: Number of log files to preserve (older ones will be automatically deleted)
 
 #### FTP Section (Required when destination_type is "ftp")
 
@@ -252,7 +266,9 @@ The agent also supports backup rotation, which automatically deletes older backu
 
 ## Logging
 
-Logs are written to both the console and a `backup.log` file in the same directory as the script.
+Logs are written to both the console and a log file in the same directory as the script. The log file is named with a timestamp prefix in the format `[YYYY-MM-DD.HH:MM]_backup.log`.
+
+The agent also supports log rotation, which automatically deletes older log files while keeping a specified number of the most recent ones. Set the `keep_logs` option in the LOGS section to specify how many log files to preserve.
 
 ## Automation
 

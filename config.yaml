@@ -28,6 +28,10 @@ BACKUP:
   keep_local_copy: true    # Whether to keep a local copy after uploading
   keep_backups: 5          # Number of backups to preserve (older ones will be deleted)
 
+# Logs Configuration
+LOGS:
+  keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
+
 # FTP Configuration (used when destination_type is "ftp")
 FTP:
   host: "ftp.example.com"

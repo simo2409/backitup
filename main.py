@@ -25,11 +25,13 @@ except ImportError:
     logging.warning("Paramiko not available. SFTP functionality will be disabled.")
 
 # Configure logging
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M")
+log_filename = f"[{timestamp}]_backup.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("backup.log"),
+        logging.FileHandler(log_filename),
         logging.StreamHandler()
     ]
 )
@@ -54,10 +56,71 @@ class BackupAgent:
         # Default server name from system, may be overridden by config
         self.server_name = os.uname().nodename
         self.temp_dir = f"/tmp/backup_{self.timestamp}"
+        self.log_filename = f"[{self.timestamp}]_backup.log"
         
         # Ensure temp directory exists
         os.makedirs(self.temp_dir, exist_ok=True)
         
+    def list_log_files(self) -> List[str]:
+        """
+        List all existing log files in the current directory.
+        
+        Returns:
+            List[str]: List of log file paths, sorted by date (oldest first)
+        """
+        try:
+            # Get the directory where logs are stored
+            log_dir = os.getcwd()
+            
+            # Define the pattern for log files
+            pattern = "[*]_backup.log"
+            
+            # Find all matching files
+            log_files = glob.glob(os.path.join(log_dir, pattern))
+            
+            # Sort files by modification time (oldest first)
+            log_files.sort(key=os.path.getmtime)
+            
+            logger.info(f"Found {len(log_files)} existing log files")
+            return log_files
+        except Exception as e:
+            logger.error(f"Error listing log files: {e}")
+            return []
+    
+    def rotate_logs(self):
+        """
+        Rotate log files based on the configuration, deleting old logs as needed.
+        """
+        try:
+            if 'LOGS' not in self.config:
+                logger.info("Log rotation not configured, skipping")
+                return
+            
+            keep_logs = self.config['LOGS'].get('keep_logs', 0)
+            if keep_logs <= 0:
+                logger.info("Log rotation disabled (keep_logs <= 0)")
+                return
+            
+            # Get list of existing log files
+            log_files = self.list_log_files()
+            
+            # If we have more logs than we want to keep, delete the oldest ones
+            if len(log_files) > keep_logs:
+                files_to_delete = log_files[:-keep_logs]
+                logger.info(f"Deleting {len(files_to_delete)} old log files")
+                
+                for file_path in files_to_delete:
+                    try:
+                        os.remove(file_path)
+                        logger.info(f"Deleted old log file: {file_path}")
+                    except Exception as e:
+                        logger.error(f"Error deleting log file {file_path}: {e}")
+            else:
+                logger.info(f"No old log files to delete (have {len(log_files)}, keeping {keep_logs})")
+                
+        except Exception as e:
+            logger.error(f"Error during log rotation: {e}")
+    
     def load_config_from_env(self) -> Dict[str, Any]:
         """
         Load configuration from environment variables.
@@ -124,6 +187,20 @@ class BackupAgent:
                         logger.warning(f"Invalid value for {env_key}: {os.environ.get(env_key)}. Using default.")
                 else:
                     env_config['BACKUP'][config_key] = os.environ.get(env_key)
+        
+        # LOGS section
+        logs_keys = {
+            'BACKITUP_KEEP_LOGS': 'keep_logs'
+        }
+        
+        for env_key, config_key in logs_keys.items():
+            if os.environ.get(env_key):
+                env_config.setdefault('LOGS', {})
+                # Convert string to int for keep_logs
+                try:
+                    env_config['LOGS'][config_key] = int(os.environ.get(env_key))
+                except ValueError:
+                    logger.warning(f"Invalid value for {env_key}: {os.environ.get(env_key)}. Using default.")
         
         # FTP section
         ftp_keys = {
@@ -1099,6 +1176,9 @@ class BackupAgent:
         # Execute post-transfer command
         if not self.execute_command('post_transfer'):
             logger.error("Post-transfer command failed.")
+        
+        # Rotate log files
+        self.rotate_logs()
         
         logger.info(f"Backup process completed successfully. Final backup: {combined_path}")
         return True

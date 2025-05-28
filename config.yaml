@@ -31,6 +31,7 @@ BACKUP:
 # Logs Configuration
 LOGS:
   keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
+  log_dir: "logs"          # Directory to store log files (will be created if it doesn't exist)
 
 # FTP Configuration (used when destination_type is "ftp")
 FTP:

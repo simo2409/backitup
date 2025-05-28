@@ -81,6 +81,7 @@ BACKUP:
 # Logs Configuration
 LOGS:
   keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
+  log_dir: "logs"          # Directory to store log files (will be created if it doesn't exist)
 
 # FTP Configuration (used when destination_type is "ftp")
 FTP:
@@ -132,6 +133,7 @@ The following environment variables are supported:
 
 #### Logs Configuration
 - `BACKITUP_KEEP_LOGS`: Number of log files to preserve (older ones will be automatically deleted)
+- `BACKITUP_LOG_DIR`: Directory to store log files (will be created if it doesn't exist)
 
 #### FTP Configuration
 - `BACKITUP_FTP_HOST`: FTP server hostname or IP address
@@ -165,6 +167,7 @@ export BACKITUP_POST_TRANSFER_COMMAND="rclone sync /path/to/backups remote:backu
 
 # Set log rotation (optional)
 export BACKITUP_KEEP_LOGS=5
+export BACKITUP_LOG_DIR="logs"
 
 # Run the backup agent
 ./backitup.py
@@ -213,6 +216,7 @@ This example uses rclone to synchronize your local backup directory with a confi
 #### LOGS Section (Optional)
 
 - `keep_logs`: Number of log files to preserve (older ones will be automatically deleted)
+- `log_dir`: Directory to store log files (will be created if it doesn't exist)
 
 #### FTP Section (Required when destination_type is "ftp")
 
@@ -253,12 +257,12 @@ The configuration file is optional if all required configuration is provided thr
 The backup agent creates a combined backup file in the current directory with the naming format:
 
 ```
-[YYYY-MM-DD.HH:MM]_[server_name]_root_files_and_db.tar.gz
+[YYYY-MM-DD.HH:MM:SS]_[server_name]_root_files_and_db.tar.gz
 ```
 
 This archive contains two files:
-1. `[YYYY-MM-DD.HH:MM]_[server_name]_db.tar.gz` - Database backup
-2. `[YYYY-MM-DD.HH:MM]_[server_name]_root_files.tar.gz` - Files backup
+1. `[YYYY-MM-DD.HH:MM:SS]_[server_name]_db.tar.gz` - Database backup
+2. `[YYYY-MM-DD.HH:MM:SS]_[server_name]_root_files.tar.gz` - Files backup
 
 If a remote destination (FTP or SFTP) is configured, the backup will be uploaded to that destination. You can choose whether to keep a local copy of the backup after uploading by setting the `keep_local_copy` option in the BACKUP section.
 
@@ -266,9 +270,9 @@ The agent also supports backup rotation, which automatically deletes older backu
 
 ## Logging
 
-Logs are written to both the console and a log file in the same directory as the script. The log file is named with a timestamp prefix in the format `[YYYY-MM-DD.HH:MM]_backup.log`.
+Logs are written to both the console and a log file in a dedicated logs directory. The log file is named with a timestamp prefix in the format `[YYYY-MM-DD.HH:MM:SS]_backup.log`.
 
-The agent also supports log rotation, which automatically deletes older log files while keeping a specified number of the most recent ones. Set the `keep_logs` option in the LOGS section to specify how many log files to preserve.
+The agent also supports log rotation, which automatically deletes older log files while keeping a specified number of the most recent ones. Set the `keep_logs` option in the LOGS section to specify how many log files to preserve. You can also specify a custom log directory using the `log_dir` option.
 
 ## Automation
 

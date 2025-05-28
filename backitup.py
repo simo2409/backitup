@@ -25,8 +25,10 @@ except ImportError:
     logging.warning("Paramiko not available. SFTP functionality will be disabled.")
 
 # Configure logging
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M")
-log_filename = f"[{timestamp}]_backup.log"
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
+log_dir = "logs"  # Default log directory, may be overridden by config
+os.makedirs(log_dir, exist_ok=True)  # Create log directory if it doesn't exist
+log_filename = os.path.join(log_dir, f"[{timestamp}]_backup.log")
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -52,10 +54,11 @@ class BackupAgent:
         """
         self.config_path = config_path
         self.config = None
-        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M")
+        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
         # Default server name from system, may be overridden by config
         self.server_name = os.uname().nodename
         self.temp_dir = f"/tmp/backup_{self.timestamp}"
+        self.log_dir = "logs"  # Default log directory, may be overridden by config
         self.log_filename = f"[{self.timestamp}]_backup.log"
         
         # Ensure temp directory exists
@@ -63,14 +66,20 @@ class BackupAgent:
         
     def list_log_files(self) -> List[str]:
         """
-        List all existing log files in the current directory.
+        List all existing log files in the log directory.
         
         Returns:
             List[str]: List of log file paths, sorted by date (oldest first)
         """
         try:
             # Get the directory where logs are stored
-            log_dir = os.getcwd()
+            if self.config and 'LOGS' in self.config and 'log_dir' in self.config['LOGS']:
+                log_dir = self.config['LOGS']['log_dir']
+            else:
+                log_dir = self.log_dir
+            
+            # Ensure log directory exists
+            os.makedirs(log_dir, exist_ok=True)
             
             # Define the pattern for log files
             pattern = "[*]_backup.log"
@@ -81,7 +90,7 @@ class BackupAgent:
             # Sort files by modification time (oldest first)
             log_files.sort(key=os.path.getmtime)
             
-            logger.info(f"Found {len(log_files)} existing log files")
+            logger.info(f"Found {len(log_files)} existing log files in {log_dir}")
             return log_files
         except Exception as e:
             logger.error(f"Error listing log files: {e}")
@@ -100,6 +109,12 @@ class BackupAgent:
             if keep_logs <= 0:
                 logger.info("Log rotation disabled (keep_logs <= 0)")
                 return
+            
+            # Update log directory from config if specified
+            if 'log_dir' in self.config['LOGS']:
+                self.log_dir = self.config['LOGS']['log_dir']
+                # Ensure log directory exists
+                os.makedirs(self.log_dir, exist_ok=True)
             
             # Get list of existing log files
             log_files = self.list_log_files()
@@ -190,7 +205,8 @@ class BackupAgent:
         
         # LOGS section
         logs_keys = {
-            'BACKITUP_KEEP_LOGS': 'keep_logs'
+            'BACKITUP_KEEP_LOGS': 'keep_logs',
+            'BACKITUP_LOG_DIR': 'log_dir'
         }
         
         for env_key, config_key in logs_keys.items():
@@ -327,6 +343,13 @@ class BackupAgent:
             # Update server_name from config
             self.server_name = self.config['SYSTEM']['server_name']
             logger.info(f"Using server name: {self.server_name}")
+            
+            # Update log_dir from config if specified
+            if 'LOGS' in self.config and 'log_dir' in self.config['LOGS']:
+                self.log_dir = self.config['LOGS']['log_dir']
+                # Ensure log directory exists
+                os.makedirs(self.log_dir, exist_ok=True)
+                logger.info(f"Using log directory: {self.log_dir}")
             
             # Check BACKUP section (optional)
             if 'BACKUP' in self.config:

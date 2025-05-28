@@ -47,7 +47,7 @@ class BackupAgent:
         """
         self.config_path = config_path
         self.config = None
-        self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
+        self.timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         # Default server name from system, may be overridden by config
         self.server_name = os.uname().nodename
         self.temp_dir = f"/tmp/backup_{self.timestamp}"
@@ -66,7 +66,7 @@ class BackupAgent:
         os.makedirs(self.log_dir, exist_ok=True)
         
         # Create log filename without brackets
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         log_filename = os.path.join(self.log_dir, f"{timestamp}_backup.log")
         
         # Configure file handler

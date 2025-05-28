@@ -154,7 +154,7 @@ export BACKITUP_FILES_DIR_PATH="/var/www/something/current"
 # Set command execution (optional)
 export BACKITUP_PRE_BACKUP_COMMAND="echo 'Starting backup' | mail -s 'Backup started' admin@example.com"
 export BACKITUP_POST_BACKUP_COMMAND="echo 'Backup created, preparing to transfer' | mail -s 'Backup ready' admin@example.com"
-export BACKITUP_POST_TRANSFER_COMMAND="echo 'Backup completed and transferred' | mail -s 'Backup completed' admin@example.com"
+export BACKITUP_POST_TRANSFER_COMMAND="rclone sync /path/to/backups remote:backup-folder --progress"
 
 # Run the backup agent
 ./main.py
@@ -183,6 +183,16 @@ export BACKITUP_POST_TRANSFER_COMMAND="echo 'Backup completed and transferred' |
 - `pre_backup`: Command to execute before beginning backup operations
 - `post_backup`: Command to execute after backup operations but before transfer
 - `post_transfer`: Command to execute after all operations including transfer
+
+Example of using rclone to sync backups to cloud storage after all operations:
+
+```bash
+# In config.yaml
+COMMANDS:
+  post_transfer: "rclone sync /path/to/backups remote:backup-folder --progress"
+```
+
+This example uses rclone to synchronize your local backup directory with a configured remote storage (like Google Drive, Dropbox, AWS S3, etc.) after the backup and transfer operations are complete.
 
 #### BACKUP Section (Optional)
 

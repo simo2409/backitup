@@ -24,18 +24,11 @@ except ImportError:
     PARAMIKO_AVAILABLE = False
     logging.warning("Paramiko not available. SFTP functionality will be disabled.")
 
-# Configure logging
-timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
-log_dir = "logs"  # Default log directory, may be overridden by config
-os.makedirs(log_dir, exist_ok=True)  # Create log directory if it doesn't exist
-log_filename = os.path.join(log_dir, f"[{timestamp}]_backup.log")
+# Configure basic console logging for startup messages
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_filename),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger("backup_agent")
 
@@ -59,10 +52,37 @@ class BackupAgent:
         self.server_name = os.uname().nodename
         self.temp_dir = f"/tmp/backup_{self.timestamp}"
         self.log_dir = "logs"  # Default log directory, may be overridden by config
-        self.log_filename = f"[{self.timestamp}]_backup.log"
         
         # Ensure temp directory exists
         os.makedirs(self.temp_dir, exist_ok=True)
+    
+    def setup_logging(self):
+        """Set up logging with the configured log directory"""
+        # Get log directory from config if available
+        if self.config and 'LOGS' in self.config and 'log_dir' in self.config['LOGS']:
+            self.log_dir = self.config['LOGS']['log_dir']
+        
+        # Ensure log directory exists
+        os.makedirs(self.log_dir, exist_ok=True)
+        
+        # Create log filename without brackets
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d.%H:%M:%S")
+        log_filename = os.path.join(self.log_dir, f"{timestamp}_backup.log")
+        
+        # Configure file handler
+        file_handler = logging.FileHandler(log_filename)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        
+        # Remove existing handlers and add new ones
+        logger = logging.getLogger("backup_agent")
+        for handler in logger.handlers[:]:
+            if isinstance(handler, logging.FileHandler):
+                logger.removeHandler(handler)
+        
+        logger.addHandler(file_handler)
+        logger.setLevel(logging.INFO)
+        
+        logger.info(f"Logging to: {log_filename}")
         
     def list_log_files(self) -> List[str]:
         """
@@ -82,7 +102,7 @@ class BackupAgent:
             os.makedirs(log_dir, exist_ok=True)
             
             # Define the pattern for log files
-            pattern = "[*]_backup.log"
+            pattern = "*_backup.log"
             
             # Find all matching files
             log_files = glob.glob(os.path.join(log_dir, pattern))
@@ -1150,6 +1170,9 @@ class BackupAgent:
         if not self.validate_config():
             logger.error("Configuration validation failed. Aborting backup.")
             return False
+            
+        # Set up logging with the configured log directory
+        self.setup_logging()
         
         # Execute pre-backup command
         if not self.execute_command('pre_backup'):

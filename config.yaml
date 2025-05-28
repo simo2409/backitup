@@ -20,18 +20,18 @@ DB:
 
 # Files Configuration
 FILES:
-  files_dir_path: "/var/www/something/current"
+  files_dir_path: "/tmp/test_files"
 
 # Backup Destination Configuration
 BACKUP:
-  destination_type: "ftp"  # Can be "ftp", "sftp", or "local" (default)
+  destination_type: "local"  # Can be "ftp", "sftp", or "local" (default)
   keep_local_copy: true    # Whether to keep a local copy after uploading
   keep_backups: 5          # Number of backups to preserve (older ones will be deleted)
 
 # Logs Configuration
 LOGS:
   keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
-  log_dir: "logs"          # Directory to store log files (will be created if it doesn't exist)
+  log_dir: "backup_logs"          # Directory to store log files (will be created if it doesn't exist)
 
 # FTP Configuration (used when destination_type is "ftp")
 FTP:

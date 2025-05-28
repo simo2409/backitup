@@ -22,7 +22,7 @@ A Python-based backup agent for Linux servers that creates backups of MySQL/Mari
 
 ## Installation
 
-1. Copy the `main.py` and `config.yaml` files to your server
+1. Copy the `backitup.py` and `config.yaml` files to your server
 2. Install required Python packages:
 
 ```bash
@@ -38,7 +38,7 @@ pip install paramiko
 4. Make the script executable:
 
 ```bash
-chmod +x main.py
+chmod +x backitup.py
 ```
 
 ## Configuration
@@ -167,7 +167,7 @@ export BACKITUP_POST_TRANSFER_COMMAND="rclone sync /path/to/backups remote:backu
 export BACKITUP_KEEP_LOGS=5
 
 # Run the backup agent
-./main.py
+./backitup.py
 ```
 
 ### Configuration Options
@@ -237,13 +237,13 @@ This example uses rclone to synchronize your local backup directory with a confi
 Run the backup agent:
 
 ```bash
-./main.py
+./backitup.py
 ```
 
 Or specify a custom configuration file:
 
 ```bash
-./main.py /path/to/custom-config.yaml
+./backitup.py /path/to/custom-config.yaml
 ```
 
 The configuration file is optional if all required configuration is provided through environment variables.
@@ -279,4 +279,4 @@ To run the backup automatically, you can set up a cron job:
 crontab -e
 
 # Add a line to run the backup daily at 2 AM
-0 2 * * * cd /path/to/backup/script && ./main.py
+0 2 * * * cd /path/to/backup/script && ./backitup.py

@@ -8,7 +8,7 @@ import tempfile
 import yaml
 import subprocess
 from unittest.mock import patch, MagicMock, mock_open
-from main import BackupAgent
+from backitup import BackupAgent
 
 class TestBackupAgent:
     """Test class for the BackupAgent"""
@@ -566,12 +566,12 @@ class TestBackupAgent:
         # Check that the result is True (indicating success, as no command was configured)
         assert result is True
     
-    @patch('main.BackupAgent.backup_database')
-    @patch('main.BackupAgent.backup_files')
-    @patch('main.BackupAgent.combine_backups')
-    @patch('main.BackupAgent.send_backup')
-    @patch('main.BackupAgent.execute_command')
-    @patch('main.BackupAgent.cleanup')
+    @patch('backitup.BackupAgent.backup_database')
+    @patch('backitup.BackupAgent.backup_files')
+    @patch('backitup.BackupAgent.combine_backups')
+    @patch('backitup.BackupAgent.send_backup')
+    @patch('backitup.BackupAgent.execute_command')
+    @patch('backitup.BackupAgent.cleanup')
     def test_run_success(self, mock_cleanup, mock_execute_command, mock_send, mock_combine, mock_backup_files, mock_backup_db, agent_with_mock_config):
         """Test run method with successful execution"""
         # Mock all the methods to return success
@@ -596,8 +596,8 @@ class TestBackupAgent:
         mock_cleanup.assert_called_once_with("/tmp/combined_backup.tar.gz")
         mock_execute_command.assert_any_call('post_transfer')
     
-    @patch('main.BackupAgent.backup_database')
-    @patch('main.BackupAgent.cleanup')
+    @patch('backitup.BackupAgent.backup_database')
+    @patch('backitup.BackupAgent.cleanup')
     def test_run_db_backup_failure(self, mock_cleanup, mock_backup_db, agent_with_mock_config):
         """Test run method when database backup fails"""
         # Mock backup_database to return None (indicating failure)
@@ -612,9 +612,9 @@ class TestBackupAgent:
         mock_backup_db.assert_called_once()
         mock_cleanup.assert_called_once()
     
-    @patch('main.BackupAgent.backup_database')
-    @patch('main.BackupAgent.backup_files')
-    @patch('main.BackupAgent.cleanup')
+    @patch('backitup.BackupAgent.backup_database')
+    @patch('backitup.BackupAgent.backup_files')
+    @patch('backitup.BackupAgent.cleanup')
     def test_run_files_backup_failure(self, mock_cleanup, mock_backup_files, mock_backup_db, agent_with_mock_config):
         """Test run method when files backup fails"""
         # Mock backup_database to return success but backup_files to fail
@@ -631,10 +631,10 @@ class TestBackupAgent:
         mock_backup_files.assert_called_once()
         mock_cleanup.assert_called_once()
     
-    @patch('main.BackupAgent.backup_database')
-    @patch('main.BackupAgent.backup_files')
-    @patch('main.BackupAgent.combine_backups')
-    @patch('main.BackupAgent.cleanup')
+    @patch('backitup.BackupAgent.backup_database')
+    @patch('backitup.BackupAgent.backup_files')
+    @patch('backitup.BackupAgent.combine_backups')
+    @patch('backitup.BackupAgent.cleanup')
     def test_run_combine_failure(self, mock_cleanup, mock_combine, mock_backup_files, mock_backup_db, agent_with_mock_config):
         """Test run method when combining backups fails"""
         # Mock backup methods to succeed but combine to fail
@@ -691,7 +691,7 @@ class TestBackupAgent:
     def test_send_to_sftp(self, mock_sftp_client_class, mock_transport_class, agent_with_mock_config, monkeypatch):
         """Test sending backup to SFTP server"""
         # Mock paramiko availability
-        monkeypatch.setattr('main.PARAMIKO_AVAILABLE', True)
+        monkeypatch.setattr('backitup.PARAMIKO_AVAILABLE', True)
         
         # Set up the agent to use SFTP
         agent_with_mock_config.config['BACKUP']['destination_type'] = 'sftp'
@@ -745,7 +745,7 @@ class TestBackupAgent:
             # Clean up the temporary file
             os.unlink(backup_path)
     
-    @patch('main.BackupAgent.send_to_ftp')
+    @patch('backitup.BackupAgent.send_to_ftp')
     def test_send_backup_ftp(self, mock_send_to_ftp, agent_with_mock_config):
         """Test send_backup with FTP destination"""
         # Set up the agent to use FTP destination
@@ -769,7 +769,7 @@ class TestBackupAgent:
             # Clean up the temporary file
             os.unlink(backup_path)
     
-    @patch('main.BackupAgent.send_to_sftp')
+    @patch('backitup.BackupAgent.send_to_sftp')
     def test_send_backup_sftp(self, mock_send_to_sftp, agent_with_mock_config):
         """Test send_backup with SFTP destination"""
         # Set up the agent to use SFTP destination
@@ -822,7 +822,7 @@ class TestBackupAgent:
         assert f"*_{agent_with_mock_config.server_name}_root_files_and_db.tar.gz" in pattern_arg
     
     @patch('os.remove')
-    @patch('main.BackupAgent.list_local_backups')
+    @patch('backitup.BackupAgent.list_local_backups')
     def test_delete_old_local_backups(self, mock_list_backups, mock_remove, agent_with_mock_config):
         """Test deleting old local backups"""
         # Set up the agent to keep 2 backups
@@ -845,7 +845,7 @@ class TestBackupAgent:
         # Verify os.remove was called for the oldest backup
         mock_remove.assert_called_once_with(backup_files[0])
     
-    @patch('main.BackupAgent.list_remote_backups_ftp')
+    @patch('backitup.BackupAgent.list_remote_backups_ftp')
     @patch('ftplib.FTP')
     def test_delete_old_remote_backups_ftp(self, mock_ftp_class, mock_list_backups, agent_with_mock_config):
         """Test deleting old remote backups from FTP server"""
@@ -881,13 +881,13 @@ class TestBackupAgent:
         mock_ftp.delete.assert_called_once_with(backup_files[0])
         mock_ftp.quit.assert_called_once()
     
-    @patch('main.BackupAgent.list_remote_backups_sftp')
+    @patch('backitup.BackupAgent.list_remote_backups_sftp')
     @patch('paramiko.Transport')
     @patch('paramiko.SFTPClient')
     def test_delete_old_remote_backups_sftp(self, mock_sftp_client_class, mock_transport_class, mock_list_backups, agent_with_mock_config, monkeypatch):
         """Test deleting old remote backups from SFTP server"""
         # Mock paramiko availability
-        monkeypatch.setattr('main.PARAMIKO_AVAILABLE', True)
+        monkeypatch.setattr('backitup.PARAMIKO_AVAILABLE', True)
         
         # Set up the agent to use SFTP and keep 2 backups
         agent_with_mock_config.config['BACKUP']['destination_type'] = 'sftp'
@@ -924,9 +924,9 @@ class TestBackupAgent:
         mock_sftp.close.assert_called_once()
         mock_transport.close.assert_called_once()
     
-    @patch('main.BackupAgent.delete_old_local_backups')
-    @patch('main.BackupAgent.delete_old_remote_backups_ftp')
-    @patch('main.BackupAgent.delete_old_remote_backups_sftp')
+    @patch('backitup.BackupAgent.delete_old_local_backups')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_ftp')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_sftp')
     def test_rotate_backups_local(self, mock_sftp_rotate, mock_ftp_rotate, mock_local_rotate, agent_with_mock_config):
         """Test rotating backups with local destination"""
         # Set up the agent to use local destination
@@ -942,9 +942,9 @@ class TestBackupAgent:
         mock_ftp_rotate.assert_not_called()
         mock_sftp_rotate.assert_not_called()
     
-    @patch('main.BackupAgent.delete_old_local_backups')
-    @patch('main.BackupAgent.delete_old_remote_backups_ftp')
-    @patch('main.BackupAgent.delete_old_remote_backups_sftp')
+    @patch('backitup.BackupAgent.delete_old_local_backups')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_ftp')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_sftp')
     def test_rotate_backups_ftp(self, mock_sftp_rotate, mock_ftp_rotate, mock_local_rotate, agent_with_mock_config):
         """Test rotating backups with FTP destination"""
         # Set up the agent to use FTP destination
@@ -960,9 +960,9 @@ class TestBackupAgent:
         # Verify delete_old_remote_backups_sftp was not called
         mock_sftp_rotate.assert_not_called()
     
-    @patch('main.BackupAgent.delete_old_local_backups')
-    @patch('main.BackupAgent.delete_old_remote_backups_ftp')
-    @patch('main.BackupAgent.delete_old_remote_backups_sftp')
+    @patch('backitup.BackupAgent.delete_old_local_backups')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_ftp')
+    @patch('backitup.BackupAgent.delete_old_remote_backups_sftp')
     def test_rotate_backups_sftp(self, mock_sftp_rotate, mock_ftp_rotate, mock_local_rotate, agent_with_mock_config):
         """Test rotating backups with SFTP destination"""
         # Set up the agent to use SFTP destination
@@ -1006,7 +1006,7 @@ class TestBackupAgent:
         assert "[*]_backup.log" in pattern_arg
     
     @patch('os.remove')
-    @patch('main.BackupAgent.list_log_files')
+    @patch('backitup.BackupAgent.list_log_files')
     def test_rotate_logs(self, mock_list_logs, mock_remove, agent_with_mock_config):
         """Test rotating log files"""
         # Set up the agent with LOGS configuration
@@ -1029,13 +1029,13 @@ class TestBackupAgent:
         # Verify os.remove was called for the oldest log file
         mock_remove.assert_called_once_with(log_files[0])
     
-    @patch('main.BackupAgent.rotate_logs')
-    @patch('main.BackupAgent.rotate_backups')
-    @patch('main.BackupAgent.backup_database')
-    @patch('main.BackupAgent.backup_files')
-    @patch('main.BackupAgent.combine_backups')
-    @patch('main.BackupAgent.send_backup')
-    @patch('main.BackupAgent.cleanup')
+    @patch('backitup.BackupAgent.rotate_logs')
+    @patch('backitup.BackupAgent.rotate_backups')
+    @patch('backitup.BackupAgent.backup_database')
+    @patch('backitup.BackupAgent.backup_files')
+    @patch('backitup.BackupAgent.combine_backups')
+    @patch('backitup.BackupAgent.send_backup')
+    @patch('backitup.BackupAgent.cleanup')
     def test_run_with_rotation(self, mock_cleanup, mock_send, mock_combine, mock_backup_files, mock_backup_db, mock_rotate_backups, mock_rotate_logs, agent_with_mock_config):
         """Test run method with backup and log rotation"""
         # Mock all the methods to return success
@@ -1065,7 +1065,7 @@ class TestBackupAgent:
             del agent_with_mock_config.config['LOGS']
         
         # Mock list_log_files to ensure it's not called
-        with patch('main.BackupAgent.list_log_files') as mock_list_logs:
+        with patch('backitup.BackupAgent.list_log_files') as mock_list_logs:
             # Test the method
             agent_with_mock_config.rotate_logs()
             
@@ -1078,7 +1078,7 @@ class TestBackupAgent:
         agent_with_mock_config.config['LOGS'] = {'keep_logs': 0}
         
         # Mock list_log_files to ensure it's not called
-        with patch('main.BackupAgent.list_log_files') as mock_list_logs:
+        with patch('backitup.BackupAgent.list_log_files') as mock_list_logs:
             # Test the method
             agent_with_mock_config.rotate_logs()
             

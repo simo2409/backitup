@@ -1,4 +1,4 @@
-# Linux Server Backup Agent
+# backItUp: a Linux Server Backup Agent
 
 A Python-based backup agent for Linux servers that creates backups of MySQL/MariaDB databases and specified file directories.
 

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>backitup - Linux Server Backup Agent</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>backitup</h1>
+            <p class="tagline">A simple, powerful Linux server backup agent</p>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2>Backup your Linux servers with ease</h2>
+                <p>backitup is a Python-based backup agent that creates backups of MySQL/MariaDB databases and specified file directories.</p>
+                <div class="cta-buttons">
+                    <a href="https://github.com/simo2409/backitup" class="btn primary"><i class="fab fa-github"></i> GitHub</a>
+                    <a href="#features" class="btn secondary">Learn More</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Database Backups</h3>
+                    <p>Backs up MySQL/MariaDB databases using mysqldump with support for all databases or specific ones.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-folder"></i>
+                    </div>
+                    <h3>File Backups</h3>
+                    <p>Backs up specified file directories, preserving your important files and configurations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-archive"></i>
+                    </div>
+                    <h3>Compression</h3>
+                    <p>Compresses backups into tar.gz files to save space and make transfers more efficient.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h3>Remote Storage</h3>
+                    <p>Supports uploading backups to FTP or SFTP servers for off-site storage.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h3>Backup Rotation</h3>
+                    <p>Automatically manages backup retention, keeping only the specified number of recent backups.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-terminal"></i>
+                    </div>
+                    <h3>Custom Commands</h3>
+                    <p>Executes custom commands at key points in the backup process for maximum flexibility.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="installation">
+        <div class="container">
+            <h2>Installation</h2>
+            <div class="code-block">
+                <pre><code># Clone the repository
+git clone https://github.com/simo2409/backitup.git
+
+# Install required packages
+pip install pyyaml
+
+# For SFTP support
+pip install paramiko
+
+# Make the script executable
+chmod +x backitup.py</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="usage">
+        <div class="container">
+            <h2>Usage</h2>
+            <div class="code-block">
+                <pre><code># Run with default config
+./backitup.py
+
+# Or specify a custom config file
+./backitup.py /path/to/custom-config.yaml</code></pre>
+            </div>
+            <p>Configure backitup using either a YAML configuration file, environment variables, or a combination of both.</p>
+        </div>
+    </section>
+
+    <section class="configuration">
+        <div class="container">
+            <h2>Configuration</h2>
+            <div class="tabs">
+                <div class="tab-header">
+                    <div class="tab-btn active" data-tab="yaml">YAML Configuration</div>
+                    <div class="tab-btn" data-tab="env">Environment Variables</div>
+                </div>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="yaml-tab">
+                        <div class="code-block">
+                            <pre><code># System Configuration
+SYSTEM:
+  server_name: "foobar.com"  # Server name to use in backup filenames
+
+# Database Configuration
+DB:
+  db_type: "mysql"  # Can be "mysql" or "mariadb"
+  db_host: "127.0.0.1"
+  db_user: "root"  # Optional, defaults to "root"
+  db_password: ""  # Optional, defaults to empty string
+  db_name: "--all-databases"  # Optional, defaults to "--all-databases"
+
+# Files Configuration
+FILES:
+  files_dir_path: "/var/www/something/current"
+
+# Backup Destination Configuration
+BACKUP:
+  destination_type: "ftp"  # Can be "ftp", "sftp", or "local" (default)
+  keep_local_copy: true    # Whether to keep a local copy after uploading
+  keep_backups: 5          # Number of backups to preserve (older ones will be deleted)</code></pre>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="env-tab">
+                        <div class="code-block">
+                            <pre><code># Set required environment variables
+export BACKITUP_SERVER_NAME="foobar.com"
+export BACKITUP_DB_TYPE="mysql"
+export BACKITUP_DB_HOST="127.0.0.1"
+export BACKITUP_FILES_DIR_PATH="/var/www/something/current"
+
+# Set backup destination (optional)
+export BACKITUP_DESTINATION_TYPE="ftp"
+export BACKITUP_KEEP_LOCAL_COPY="true"
+export BACKITUP_KEEP_BACKUPS="5"
+
+# Run the backup agent
+./backitup.py</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="github-cta">
+        <div class="container">
+            <h2>Ready to Get Started?</h2>
+            <p>Check out backitup on GitHub and start backing up your Linux servers today.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/simo2409/backitup" class="btn primary"><i class="fab fa-github"></i> Check it out on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-links">
+                    <a href="https://github.com/simo2409/backitup">GitHub</a>
+                    <a href="https://github.com/simo2409/backitup/issues">Issues</a>
+                </div>
+                <p class="copyright">Created by <a href="https://github.com/simo2409">simo2409</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

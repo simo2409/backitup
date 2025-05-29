@@ -47,12 +47,50 @@ after the add, implement the code accordingly
 
 ---
 
+modifica lo script affinché, al posto o per completare i dati del config.yaml possa utilizzare delle variabili di environment settate prima della sua esecuzione.
+Se un dato è presente nel config.yaml e nella relativa variabile di ambiente, ha la precedenza la variabile di ambiente.
+Modifica lo script perché la presenza del file config.yaml non sia più obbligatoria (ma in questo caso devono esserci le variabili di ambiente necessarie).
+Documenta nel file readme questa possibilità e inserisci i relativi test
 
+---
 
+insert in the config.yaml (or by environmental variables) to execute:
+    - a command before the beginning of backup operations
+    - a command after all the backup operations but before the transfer to the final destination
+    - a command after all the operations, included the transfer to the final destination
 
+---
 
+insert, as example of after all operations in the readme file, an "rclone sync" command
 
+---
 
+Change the backup log name adding "[YYYY-MM-DD.HH:MM]" prefix. Add a new section in config.yaml called LOGS in which you can define how many backup logs should be preserved before rotating. The rotation follows the same logic as "keep_backups" in the BACKUP section. After changing the script, update tests and the readme file.
+
+---
+
+rename the script from main.py to backitup.py and update all the occurrencies everywhere (comments, readme, etc)
+
+---
+
+add seconds in filename timestamps, put all the logs in a directory (create it if it doesn't exist) and add, under LOGS (in config), a directive for specify the path of the log directory
+
+---
+
+three problems:
+- if I change "log_dir" in "backup_logs" I still see the creation of "logs" directory. There must be an error.
+- i see a log file with this name '[2025-05-28.20:08:02]_backup.log' it should not have ' character nor [ and ]
+- the log file I see it's empty
+
+Solve them
+
+---
+
+change the format of the timestamp in file names from 2025-05-28.20:06:13_sp.twig.design_root_files_and_db.tar.gz to 20250528_200613_sp.twig.design_root_files_and_db.tar.gz
+
+---
+TODO
+- 
 
 
 

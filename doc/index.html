@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>backItUp - Linux Server Backup Agent</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #2980b9;
+        }
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        pre {
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .main-content {
+            flex: 3;
+            min-width: 300px;
+            padding-right: 30px;
+        }
+        .sidebar {
+            flex: 1;
+            min-width: 200px;
+            background-color: #f8f8f8;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .feature-box {
+            background-color: #f8f8f8;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .cta-button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .cta-button:hover {
+            background-color: #2980b9;
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            color: #7f8c8d;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .main-content {
+                padding-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>backItUp</h1>
+        <p>A robust, configurable backup solution for Linux servers</p>
+        <a href="https://github.com/simo2409/backitup" class="cta-button">View on GitHub</a>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <h2>Overview</h2>
+            <p>
+                backItUp is a lightweight yet powerful Python-based backup agent designed for Linux servers. 
+                It creates comprehensive backups of MySQL/MariaDB databases and specified file directories, 
+                with flexible configuration options and multiple destination support.
+            </p>
+
+            <div class="feature-box">
+                <h3>Key Features</h3>
+                <ul>
+                    <li><strong>Database Backups:</strong> Automatically backs up MySQL/MariaDB databases using mysqldump</li>
+                    <li><strong>File Backups:</strong> Creates compressed archives of specified file directories</li>
+                    <li><strong>Multiple Destinations:</strong> Supports local storage, FTP, and SFTP destinations</li>
+                    <li><strong>Backup Rotation:</strong> Automatically manages backup retention with configurable policies</li>
+                    <li><strong>Flexible Configuration:</strong> Configure via YAML file, environment variables, or both</li>
+                    <li><strong>Logging System:</strong> Detailed logging with rotation and customizable directory</li>
+                    <li><strong>Custom Commands:</strong> Execute commands before backup, after backup, and after transfer</li>
+                    <li><strong>Secure:</strong> Supports password-based and key-based authentication for SFTP</li>
+                </ul>
+            </div>
+
+            <h2>Getting Started</h2>
+            <h3>Installation</h3>
+            <ol>
+                <li>Copy the <code>backitup.py</code> and <code>config.yaml</code> files to your server</li>
+                <li>Install required Python packages:
+                    <pre><code>pip install pyyaml</code></pre>
+                </li>
+                <li>For SFTP support, install the paramiko package:
+                    <pre><code>pip install paramiko</code></pre>
+                </li>
+                <li>Make the script executable:
+                    <pre><code>chmod +x backitup.py</code></pre>
+                </li>
+            </ol>
+
+            <h3>Basic Usage</h3>
+            <p>Run the backup agent:</p>
+            <pre><code>./backitup.py</code></pre>
+            <p>Or specify a custom configuration file:</p>
+            <pre><code>./backitup.py /path/to/custom-config.yaml</code></pre>
+
+            <h2>Configuration</h2>
+            <p>
+                You can configure the backup agent using either a YAML configuration file, 
+                environment variables, or a combination of both. If a configuration option 
+                is specified in both the YAML file and environment variables, the environment 
+                variable takes precedence.
+            </p>
+
+            <h3>YAML Configuration Example</h3>
+            <pre><code># System Configuration
+SYSTEM:
+  server_name: "foobar.com"  # Server name to use in backup filenames
+
+# Database Configuration
+DB:
+  db_type: "mysql"  # Can be "mysql" or "mariadb"
+  db_host: "127.0.0.1"
+  db_user: "root"  # Optional, defaults to "root"
+  db_password: ""  # Optional, defaults to empty string
+  db_name: "--all-databases"  # Optional, defaults to "--all-databases"
+
+# Files Configuration
+FILES:
+  files_dir_path: "/var/www/something/current"
+
+# Backup Destination Configuration
+BACKUP:
+  destination_type: "local"  # Can be "ftp", "sftp", or "local" (default)
+  keep_local_copy: true    # Whether to keep a local copy after uploading
+  keep_backups: 5          # Number of backups to preserve (older ones will be deleted)
+
+# Logs Configuration
+LOGS:
+  keep_logs: 5             # Number of log files to preserve (older ones will be deleted)
+  log_dir: "logs"          # Directory to store log files (will be created if it doesn't exist)</code></pre>
+
+            <h2>Advanced Usage</h2>
+            <h3>Automation with Cron</h3>
+            <p>To run the backup automatically, you can set up a cron job:</p>
+            <pre><code># Edit crontab
+crontab -e
+
+# Add a line to run the backup daily at 2 AM
+0 2 * * * cd /path/to/backup/script && ./backitup.py</code></pre>
+
+            <h3>Using Custom Commands</h3>
+            <p>
+                You can configure custom commands to run at different stages of the backup process:
+            </p>
+            <pre><code># Command Execution Configuration
+COMMANDS:
+  pre_backup: "echo 'Starting backup' | mail -s 'Backup started' admin@example.com"
+  post_backup: "echo 'Backup created, preparing to transfer' | mail -s 'Backup ready' admin@example.com"
+  post_transfer: "rclone sync /path/to/backups remote:backup-folder --progress"</code></pre>
+        </div>
+
+        <div class="sidebar">
+            <h3>Documentation</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#configuration">Configuration</a></li>
+                <li><a href="#advanced-usage">Advanced Usage</a></li>
+            </ul>
+
+            <h3>Resources</h3>
+            <ul>
+                <li><a href="https://github.com/simo2409/backitup">GitHub Repository</a></li>
+                <li><a href="https://github.com/simo2409/backitup/issues">Issue Tracker</a></li>
+            </ul>
+
+            <h3>Perfect For</h3>
+            <ul>
+                <li>Web servers requiring regular database and file backups</li>
+                <li>Development environments needing automated backup solutions</li>
+                <li>Small to medium-sized businesses looking for a reliable backup strategy</li>
+                <li>DevOps engineers seeking a scriptable, configurable backup tool</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>backItUp is maintained by <a href="https://github.com/simo2409">simo2409</a></p>
+        <p>This project is licensed under the MIT License</p>
+    </footer>
+</body>
+</html>

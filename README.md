@@ -284,3 +284,19 @@ crontab -e
 
 # Add a line to run the backup daily at 2 AM
 0 2 * * * cd /path/to/backup/script && ./backitup.py
+```
+
+## Documentation
+
+Comprehensive documentation for backItUp is available on our GitHub Pages site:
+
+[https://simo2409.github.io/backitup/](https://simo2409.github.io/backitup/)
+
+The documentation includes:
+- Detailed installation instructions
+- Configuration examples
+- Advanced usage scenarios
+- Troubleshooting tips
+- Best practices for backup strategies
+
+The documentation source files are located in the `doc` directory of this repository.
